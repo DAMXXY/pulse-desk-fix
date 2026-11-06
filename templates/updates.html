@@ -1,0 +1,30 @@
+﻿{% extends "base.html" %}
+{% block title %}Updates | PulseDesk{% endblock %}
+{% block content %} <div class="d-flex justify-content-between align-items-end mb-4"> <div> <div class="eyebrow mb-2">Change register</div><h1 class="page-title mb-1">System updates</h1> <p class="text-secondary mb-0"> Record deployments and watch
+  for incidents that follow.
+  </p>
+  </div>
+  </div>
+  <div class="row g-4">
+    <div class="col-lg-5">
+      <form class="card bg-white p-4" method="post">
+        <h2 class="h5 mb-3">Record an update</h2>
+        <label class="form-label">System</label>
+        <input
+          class="form-control mb-3"
+          name="system"
+          placeholder="Finacle"
+          required
+        >
+        <label class="form-label">Version</label>
+        <input
+          class="form-control mb-3"
+          name="version"
+          placeholder="4.8"
+          required
+        ><label class="form-label">Deployment date</label>
+        <input class="form-control mb-3" type="date" name="deployment_date" required>
+        <label class="form-label">Description</label>
+        <textarea class="form-control mb-3" name="description" rows="3" placeholder="What changed?" required>
+  </textarea><button class="btn btn-coral w-100">Save update</button> </form></div> <div class="col-lg-7"> <div class="card bg-white"> <div class="p-3 border-bottom"> <h2 class="h5 mb-0">Deployment history</h2></div> <div class="table-responsive"> <table class="table"> <thead> <tr> <th class="ps-3">System</th><th>Version</th> <th>Date</th><th class="pe-3">Details</th> </tr></thead> <tbody> {% for update in updates %} <tr> <td class="ps-3 fw-semibold">{{ update.system }}</td><td>{{ update.version }}</td> <td>{{ update.deployment_date.strftime("%d %b %Y") }}</td><td class="pe-3 small text-secondary">{{ update.description }}</td> </tr>{% else %}<tr><td colspan="4" class="empty-state">No updates recorded yet.</td> </tr>{% endfor %}</tbody> </table></div> </div></div> </div>{% endblock %}
+

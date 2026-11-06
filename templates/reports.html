@@ -1,0 +1,15 @@
+﻿{% extends "base.html" %}
+{% block title %}Reports | PulseDesk{% endblock %}
+{% block content %}
+  <div
+    class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4"
+  >
+    <div> <div class="eyebrow mb-2">Service desk reporting</div><h1 class="page-title mb-1">Reports</h1> <p class="text-secondary mb-0">A compact summary of ticket volume and support workload.</p></div> <a class="btn btn-dark" href="{{ url_for('report_csv') }}">Download CSV </a></div> <div class="row g-3 mb-4"> {% for key, label in [('total','Total tickets'),('open','Open'),('resolved','Resolved'),('high','High priority')] %} <div class="col-6 col-xl-3"> <div class="card stat-card p-3"> <div class="stat-label">{{ label }}</div><div class="stat-value mt-2">{{ stats[key] }}</div> </div></div> {% endfor %} </div><div class="row g-4"><div class="col-lg-5"><div class="section-heading"><div><div class="eyebrow">Breakdown</div> <h2 class="h4 mb-0">By category</h2></div> </div><div class="card bg-white p-4">{% for category, count in category_counts %}<div class="d-flex justify-content-between mb-3"><span>{{ category }}</span> <strong>{{ count }} </strong></div> <div class="progress mb-3"> <div
+   class="progress-bar"
+   style="width: {{ (count / stats.total * 100) if stats.total else 0 }}%"
+ ></div></div> {% else %} <div class="empty-state py-3">No report data yet.</div>{% endfor %}</div> </div><div class="col-lg-7"><div class="section-heading"><div><div class="eyebrow">Exportable data</div> <h2 class="h4 mb-0">Latest ticket summary</h2></div> </div><div class="card bg-white"><div class="table-responsive"><table class="table"><thead><tr><th class="ps-3">Ticket</th> <th>System</th><th>Category</th> <th class="pe-3">Status</th></tr> </thead><tbody>{% for ticket in tickets[:8] %}<tr><td class="ps-3"><a
+  class="ticket-number"
+  href="{{ url_for('ticket_detail', ticket_id=ticket.id) }}"
+>
+      {{ ticket.ticket_number }} </a></td> <td>{{ ticket.system }}</td><td>{{ ticket.category }}</td> <td class="pe-3">{{ ticket.status }}</td></tr> {% else %} <tr> <td colspan="4" class="empty-state">No ticket data yet.</td></tr> {% endfor %} </tbody></table> </div></div> </div></div> {% endblock %}
+

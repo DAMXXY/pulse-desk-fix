@@ -1,0 +1,105 @@
+﻿{% extends "base.html" %}
+{% block title %}Generate Demo Activity | PulseDesk{% endblock %}
+{% block content %}
+  <div class="mb-4">
+    <div class="eyebrow mb-2">Administrator workspace</div>
+    <h1 class="page-title mb-1">Generate demo activity</h1>
+    <p class="text-secondary mb-0"> Create realistic two - month support history through the application.These become normal tickets, updates, and alerts in SQLite. </p>
+  </div>
+  <div class="row g-4">
+    <div class="col-xl-7">
+      <form class="card bg-white p-4" method="post">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Activity starts</label>
+            <input
+              class="form-control"
+              type="date"
+              name="start_date"
+              value="{{ start_date }}"
+              required
+            >
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Activity ends</label>
+            <input
+              class="form-control"
+              type="date"
+              name="end_date"
+              value="{{ end_date }}"
+              required
+            >
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Number of tickets</label>
+            <input
+              class="form-control"
+              type="number"
+              name="ticket_count"
+              value="60"
+              min="10"
+              max="250"
+              required
+            >
+            <div class="form-text">10 to 250 varied records</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">System updates</label>
+            <input
+              class="form-control"
+              type="number"
+              name="update_count"
+              value="4"
+              min="1"
+              max="10"
+              required
+            >
+          </div>
+          <div class="col-12">
+            <label class="form-label">Systems</label>
+            <input
+              class="form-control"
+              name="systems"
+              value="Finacle, Network Authentication, Payroll Portal, Email"
+              required
+            >
+            <div class="form-text"> Comma - separated names.The first system will receive a few concentrated incidents to demonstrate pattern detection. </div>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Categories</label>
+            <input
+              class="form-control"
+              name="categories"
+              value="Application, Network, Hardware, Access"
+              required
+            >
+            <div
+              class="form-text"
+            > Comma - separated categories used in the generated tickets. </div>
+          </div>
+        </div>
+        <div class="d-flex justify-content-end gap-2 mt-4">
+          <a class="btn btn-light" href="{{ url_for('dashboard') }}">Cancel</a>
+          <button class="btn btn-dark px-4">Generate activity</button>
+        </div>
+      </form>
+    </div>
+    <div class="col-xl-5">
+      <div class="card mint-panel p-4 mb-3">
+        <h2 class="h5">What this creates</h2>
+        <ul class="small text-secondary ps-3 mb-0">
+          <li class="mb-2">Tickets distributed across all seeded branches</li>
+          <li class="mb-2">Open, assigned, in - progress, and resolved statuses</li>
+          <li class="mb-2">High, medium, and low priorities with staff assignments</li>
+          <li class="mb-2">System deployments dated inside the same period</li>
+          <li>Recurring and update - correlation alerts when rules are met</li>
+        </ul>
+      </div>
+      <div class="card bg-white p-4">
+        <h2 class="h5">Role visibility</h2>
+        <p class="small text-secondary mb-0"> Officers can monitor the generated ticket history.Supervisors can triage it.Administrators can generate another activity period and review every signal. </p>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+

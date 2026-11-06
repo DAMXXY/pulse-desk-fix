@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}{{ ticket.ticket_number }} | PulseDesk{% endblock %}
+{% block content %} <div class="d-flex justify-content-between align-items-start mb-4"> <div> <a class="small text-secondary"
+href="{{ url_for('tickets') }}"> &larr; Back to tickets </a><div class="eyebrow mt-3 mb-2">Ticket detail</div> <h1 class="page-title mb-1"> {{ ticket.ticket_number }} </h1><p class="text-secondary mb-0">Created {{ ticket.created_at.strftime("%d %B %Y at %H:%M") }}</p> </div><span
+class="badge status-{{ ticket.status|lower|replace(' ', '-') }} detail-status">
+{{ ticket.status }} </span></div> <div class="row g-4"> <div class="col-lg-8"> <div class="card bg-white p-4"> <div class="row g-4"> <div class="col-sm-6"> <div class="detail-label"> Branch </div><div class="detail-value">{{ ticket.branch.branch_name }}</div> </div><div class="col-sm-6"><div class="detail-label">Reported by</div> <div class="detail-value"> {{ ticket.reported_by }} </div></div> <div class="col-sm-6"> <div class="detail-label"> System </div><div class="detail-value">{{ ticket.system }}</div> </div><div class="col-sm-6"><div class="detail-label">Category</div> <div class="detail-value"> {{ ticket.category }} </div></div> <div class="col-sm-6"> <div class="detail-label"> Priority </div><div class="detail-value priority-{{ ticket.priority|lower }}">{{ ticket.priority }}</div> </div><div class="col-sm-6"><div class="detail-label">Assigned to</div> <div class="detail-value"> {{ ticket.assigned_to or 'Unassigned' }} </div></div> <div class="col-12"> <div class="detail-label"> Description </div><div class="description-box">{{ ticket.description }}</div> </div></div> </div></div> <div class="col-lg-4"> {% if current_user.role in ["IT Supervisor", "Administrator"] %} <div class="card bg-white p-4"> <h2 class="h5 mb-3"> Manage ticket </h2><form
+method="post"
+action="{{ url_for('update_ticket', ticket_id=ticket.id) }}">
+  <label class="form-label"> Status </label><select class="form-select mb-3" name="status">{% for value in ['Open','Assigned','In Progress','Resolved'] %}<option {{ 'selected' if ticket.status==value }}>{{ value }}</option> {% endfor %} </select><label class="form-label">Priority</label> <select class="form-select mb-3"
+name="priority"> {% for value in ['High','Medium','Low'] %} <option {{ 'selected' if ticket.priority==value }}> {{ value }} </option>{% endfor %}</select> <label class="form-label"> Owner </label><input
+class="form-control mb-3"
+name="assigned_to"
+value="{{ ticket.assigned_to or '' }}">
+  <button class="btn btn-dark w-100"> Save changes </button></form> </div>{% else %}<div class="card mint-panel p-4"><h2 class="h5">Next step</h2> <p class="small text-secondary mb-0"> A supervisor or administrator can update status, priority, and ownership. </p></div> {% endif %} </div></div> {% endblock %}
+

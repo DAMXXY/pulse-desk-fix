@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Dashboard | PulseDesk{% endblock %}
+{% block content %}
+  <div
+    class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4"
+  >
+    <div>
+      <div class="eyebrow mb-2">IT service support</div>
+      <h1 class="page-title mb-1">Morning, {{ current_user.name.split()[0] }}.</h1>
+      <div class="role-context"> <span class="role-badge">{{ current_user.role }} </span><span>{{ 'You can update tickets, record deployments, and review alerts.' if current_user.role in ['IT Supervisor', 'Administrator'] else 'You can log complaints, monitor tickets, and read support reports.' }}</span> </div>
+    </div>
+    {% if current_user.role=="IT Support Officer" %} <a href="{{ url_for('new_ticket') }}" class="btn btn-coral px-4">Log a complaint </a>{% elif current_user.role=="Administrator" %}<a href="{{ url_for('demo_data') }}" class="btn btn-dark px-4">Generate demo activity</a> {% else %} <a href="{{ url_for('tickets') }}" class="btn btn-dark px-4">Review ticket queue </a>{% endif %} </div> <div class="row g-3 mb-4"> {% for key, label in [('open','Open tickets'),('resolved','Resolved'),('high','High priority'),('total','Total logged')] %} <div class="col-6 col-xl-3"> <div class="card stat-card d-flex flex-row overflow-hidden"> <div class="stat-accent"></div><div class="p-3"><div class="stat-label">{{ label }}</div> <div class="stat-value mt-2">{{ stats[key] }}</div></div> </div></div> {% endfor %} </div> <div class="row g-4">
+      <div class="col-xl-8">
+        <div class="section-heading">
+          <div>
+            <div class="eyebrow">Work queue</div> <h2 class="h4 mb-0">Recent tickets</h2> </div> <a href="{{ url_for('tickets') }}" class="text-dark small">View all tickets&rarr; </a> </div> <div class="card bg-white"> <div class="table-responsive"> <table class="table"> <thead> <tr> <th class="ps-3">Ticket</th><th>Branch</th> <th>Issue</th><th>Status</th> <th class="pe-3">Priority</th></tr> </thead><tbody>{% for ticket in recent_tickets %}<tr><td class="ps-3"><a
+  class="ticket-number"
+  href="{{ url_for('ticket_detail', ticket_id=ticket.id) }}"
+>
+              {{ ticket.ticket_number }} </a><div class="small text-secondary">{{ ticket.created_at.strftime("%d %b, %H:%M") }}</div> </td><td>{{ ticket.branch.branch_name }}</td> <td> <div class="fw-semibold">{{ ticket.category }}</div><div class="small text-secondary">{{ ticket.system }}</div> </td><td><span class="badge status-{{ ticket.status|lower|replace(' ', '-') }}">{{ ticket.status }}</span> </td><td class="pe-3"><span class="priority-{{ ticket.priority|lower }} fw-semibold">{{ ticket.priority }}</span> </td></tr> {% else %} <tr> <td colspan="5" class="empty-state">No tickets logged yet.</td></tr> {% endfor %} </tbody></table> </div></div>
+        </div>
+        <div class="col-xl-4">
+          <div class="section-heading">
+            <div>
+              <div class="eyebrow">Signal check</div> <h2 class="h4 mb-0">Tickets by category</h2> </div> </div> <div class="card bg-white p-3 mb-4"> {% for category, count in category_counts %} <div class="d-flex justify-content-between small mb-2"> <span>{{ category }} </span><strong>{{ count }}</strong> </div><div class="progress mb-3"><div
+  class="progress-bar"
+  style="width: {{ (count / stats.total * 100) if stats.total else 0 }}%"
+></div></div> {% else %} <div class="empty-state py-3">Patterns appear as tickets arrive.</div>{% endfor %}</div>
+            <div class="section-heading">
+              <div>
+                <div class="eyebrow">Needs review</div>
+                <h2 class="h4 mb-0">Recent alerts</h2>
+              </div>
+              <a href="{{ url_for('alerts') }}" class="text-dark small">All alerts&rarr; </a>
+            </div>
+            {% for alert in active_alerts %}
+              <a
+                class="alert-card d-block text-decoration-none mb-2"
+                href="{{ url_for('alert_detail', alert_id=alert.id) }}"
+              >
+                <span class="alert-icon">! </span><span><strong>{{ alert.title }}</strong> <small>{{ alert.description }} </small></span> </a>{% else %}<div class="card p-3 text-secondary small">No active alerts. The desk is quiet for now.</div> {% endfor %} </div> </div>
+      {% endblock %}
+

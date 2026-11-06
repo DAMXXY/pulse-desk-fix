@@ -1,0 +1,21 @@
+﻿{% extends "base.html" %}
+{% block title %}Log Ticket | PulseDesk{% endblock %}
+{% block content %} <div class="mb-4"> <div class="eyebrow mb-2">New incident</div><h1 class="page-title mb-1">Log a branch complaint</h1> <p class="text-secondary mb-0"> Capture enough detail
+  for the support team to act quickly. </p></div> <div class="row"> <div class="col-xl-8"> <form class="card bg-white p-4" method="post"> <div class="row g-3"> <div class="col-md-6"> <label class="form-label">Branch</label><select class="form-select" name="branch_id" required><option value="">Choose branch</option> {% for branch in branches %} <option value="{{ branch.id }}">{{ branch.branch_name }} - {{ branch.location }}</option>{% endfor %}</select> </div><div class="col-md-6"><label class="form-label">Reported by</label> <input
+   class="form-control"
+   name="reported_by"
+   placeholder="Staff member's name"
+   required
+ >
+  </div>
+  <div class="col-md-6">
+    <label class="form-label">System</label>
+    <input
+      class="form-control"
+      name="system"
+      placeholder="e.g. Finacle"
+      required
+    >
+    </div><div class="col-md-6"><label class="form-label">Category</label> <select class="form-select" name="category" required> <option value="">Choose category</option>{% for value in ['Application','Network','Hardware','Access','Other'] %}<option>{{ value }}</option> {% endfor %} </select></div> <div class="col-md-6"> <label class="form-label">Priority</label><select class="form-select" name="priority"><option>Medium</option> <option>High</option><option>Low</option> </select></div> <div class="col-md-6"> <label class="form-label">Assign to</label><select class="form-select" name="assigned_to"><option value="">Leave unassigned</option> {% for agent in agents %}<option>{{ agent.name }}</option>{% endfor %}</select> </div><div class="col-12"><label class="form-label">Description</label> <textarea class="form-control" name="description" rows="5" placeholder="What happened? Include any error message or steps already tried." required>
+  </textarea></div> </div><div class="d-flex justify-content-end gap-2 mt-4"><a class="btn btn-light" href="{{ url_for('tickets') }}">Cancel</a> <button class="btn btn-coral px-4">Create ticket</button></div> </form></div> <div class="col-xl-4 mt-4 mt-xl-0"> <div class="card p-4 mint-panel"> <h2 class="h5">Incident pattern detection</h2><p class="small text-secondary mb-0">When five open tickets share a system and category, PulseDesk creates a review alert automatically.</p> </div></div> </div>{% endblock %}
+

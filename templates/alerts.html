@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Alerts | PulseDesk{% endblock %}
+{% block content %} <div class="mb-4"> <div class="eyebrow mb-2">Incident intelligence</div><h1 class="page-title mb-1">Alerts</h1> <p class="text-secondary mb-0">Small, explainable signals generated from ticket activity.</p></div> <div class="row g-3"> {% for alert in alerts %} <div class="col-lg-6"> <div
+   class="card alert-card-large p-4
+          {% if alert.status=='Closed' %}muted - alert{% endif %}"
+ >
+<div class="d-flex justify-content-between gap-3">
+  <div>
+    <span class="severity severity-{{ alert.severity|lower }}">{{ alert.severity }}</span>
+    <h2 class="h5 mt-2 mb-2">{{ alert.title }}</h2>
+    <p class="small text-secondary mb-3">{{ alert.description }}</p>
+  </div>
+  <span class="alert-icon">!</span>
+</div>
+<div class="d-flex justify-content-between align-items-center">
+  <span
+    class="small text-secondary"
+  > {{ alert.status }} |  {{ alert.created_at.strftime("%d %b %Y") }} </span>
+  <div class="d-flex gap-2">
+    <a
+      class="btn btn-sm btn-outline-dark"
+      href="{{ url_for('alert_detail', alert_id=alert.id) }}"
+    >
+      View tickets </a>{% if alert.status=="Active" and current_user.role in ["IT Supervisor", "Administrator"] %}<form
+  method="post"
+  action="{{ url_for('close_alert', alert_id=alert.id) }}"
+>
+      <button class="btn btn-sm btn-dark">Mark reviewed</button></form> {% endif %} </div></div> </div></div> {% else %} <div class="empty-state">No alerts have been generated yet.</div>{% endfor %}</div> {% endblock %}
+

@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}Alert Detail | PulseDesk{% endblock %}
+{% block content %} <div class="mb-4"> <a class="small text-secondary" href="{{ url_for('alerts') }}">&larr; Back to alerts </a><div class="eyebrow mt-3 mb-2">Related incidents</div> <h1 class="page-title mb-1">{{ alert.title }}</h1><p class="text-secondary mb-0">{{ alert.description }}</p> </div><div class="card bg-white"><div class="p-3 border-bottom"><h2 class="h5 mb-0">{{ related_tickets|length }} related tickets</h2> </div><div class="table-responsive"><table class="table"><thead><tr><th class="ps-3">Ticket</th> <th>Branch</th><th>System</th> <th>Category</th><th>Status</th> </tr></thead> <tbody> {% for ticket in related_tickets %} <tr> <td class="ps-3"> <a
+   class="ticket-number"
+   href="{{ url_for('ticket_detail', ticket_id=ticket.id) }}"
+ >
+  {{ ticket.ticket_number }} </a></td> <td>{{ ticket.branch.branch_name }}</td><td>{{ ticket.system }}</td> <td>{{ ticket.category }}</td><td><span class="badge status-{{ ticket.status|lower|replace(' ', '-') }}">{{ ticket.status }}</span> </td></tr> {% else %} <tr> <td colspan="5" class="empty-state">No related tickets were found.</td></tr> {% endfor %} </tbody></table> </div></div> {% endblock %}
+

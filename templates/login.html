@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Sign in | PulseDesk{% endblock %}
+{% block content %}
+  <div class="login-layout">
+    <div class="login-art">
+      <div class="eyebrow">IT service support</div>
+      <h1>Keep branch operations moving.</h1>
+      <p> PulseDesk brings complaints, incident patterns, and service updates into one clear workspace. </p>
+      <div
+        class="login-art-footer"
+      >A portfolio project shaped by banking operations experience  |  Inspired by GTBank</div>
+    </div>
+    <div class="login-panel">
+      <div class="eyebrow mb-2">Welcome back</div>
+      <h2 class="mb-2">Sign in to PulseDesk</h2>
+      <p class="text-secondary mb-4">Use one of the demo accounts below.</p>
+      <form method="post">
+        <label class="form-label">Email</label>
+        <input
+          class="form-control mb-3"
+          type="email"
+          name="email"
+          placeholder="officer@pulsedesk.test"
+          required
+        >
+        <label class="form-label">Password</label>
+        <input
+          class="form-control mb-4"
+          type="password"
+          name="password"
+          placeholder="demo123"
+          required
+        >
+        <button class="btn btn-dark w-100 py-2">Sign in</button>
+      </form>
+      <div class="demo-credentials mt-4">
+        <div class="small fw-semibold mb-2">Demo access</div>
+        <div class="small text-secondary">Officer  |  officer@pulsedesk.test</div>
+        <div class="small text-secondary">Supervisor | supervisor@pulsedesk.test</div>
+        <div class="small text-secondary">Administrator  |  admin@pulsedesk.test</div>
+        <div class="small text-secondary mt-1">
+          Password
+          for all: demo123 </div></div> </div></div> {% endblock %}
+
