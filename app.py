@@ -22,9 +22,19 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 BASE_DIR = Path(__file__).resolve().parent
 app = Flask(__name__)
-app.jinja_env.globals["style_version"] = hashlib.sha256(
-    (BASE_DIR / "static" / "style.css").read_bytes()
-).hexdigest()[:12]
+
+
+def _stylesheet_version(path):
+    try:
+        return hashlib.sha256(path.read_bytes()).hexdigest()[:12]
+    except FileNotFoundError:
+        app.logger.warning("Static stylesheet is missing: %s", path)
+        return None
+
+
+app.jinja_env.globals["style_version"] = _stylesheet_version(
+    BASE_DIR / "static" / "style.css"
+)
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "academic-prototype-change-me")
 app.config["SQLALCHEMY_DATABASE_URI"] = (
     os.environ.get("DATABASE_URL") or f"sqlite:///{BASE_DIR / 'support.db'}"

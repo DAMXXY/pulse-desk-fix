@@ -1,4 +1,4 @@
-from app import app, db, Ticket
+from app import _stylesheet_version, app, db, Ticket
 
 
 def test_ticket_pages_load():
@@ -24,6 +24,18 @@ def test_login_stylesheet_is_versioned_and_served():
     assert stylesheet.data
     assert b".login-layout" in stylesheet.data
     assert b".login-navbar" in stylesheet.data
+
+
+def test_missing_stylesheet_does_not_block_app_startup(tmp_path):
+    assert _stylesheet_version(tmp_path / "missing.css") is None
+
+
+def test_login_omits_missing_stylesheet(monkeypatch):
+    monkeypatch.setitem(app.jinja_env.globals, "style_version", None)
+    response = app.test_client().get("/login")
+
+    assert response.status_code == 200
+    assert b"/static/style.css" not in response.data
 
 
 def test_detector_creates_alert():
