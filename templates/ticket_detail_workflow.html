@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}{{ ticket.ticket_number }} | PulseDesk{% endblock %}
+{% block content %}
+  <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+    <div>
+      <a class="small text-secondary" href="{{ url_for('tickets') }}">&larr; Back to ticket queue</a>
+      <div class="eyebrow mt-3 mb-2">Ticket workflow</div>
+      <h1 class="page-title mb-1">{{ ticket.ticket_number }}</h1>
+      <p class="text-secondary mb-0">{{ ticket.branch.branch_name }} | {{ ticket.system }} | {{ ticket.created_at.strftime("%d %B %Y at %H:%M") }}</p>
+    </div>
+    <span class="badge status-{{ ticket.status|lower|replace(' ', '-') }} detail-status">{{ ticket.status }}</span>
+  </div>
+
+  <div class="row g-4 align-items-start">
+    <div class="col-xl-8">
+      <section class="card bg-white p-4 mb-4">
+        <h2 class="h5 mb-3">Reported complaint</h2>
+        <div class="row g-3">
+          <div class="col-sm-6"><div class="detail-label">Branch</div><div class="detail-value">{{ ticket.branch.branch_name }}</div></div>
+          <div class="col-sm-6"><div class="detail-label">Reported by</div><div class="detail-value">{{ ticket.reported_by }}</div></div>
+          <div class="col-sm-6"><div class="detail-label">System</div><div class="detail-value">{{ ticket.system }}</div></div>
+          <div class="col-sm-6"><div class="detail-label">Category</div><div class="detail-value">{{ ticket.category }}</div></div>
+          <div class="col-sm-6"><div class="detail-label">Priority</div><div class="detail-value priority-{{ ticket.priority|lower }}">{{ ticket.priority }}</div></div>
+          <div class="col-sm-6"><div class="detail-label">Assigned officer</div><div class="detail-value">{{ ticket.assigned_to or 'Awaiting supervisor assignment' }}</div></div>
+          <div class="col-12"><div class="detail-label">Original complaint</div><div class="description-box">{{ ticket.description }}</div></div>
+        </div>
+      </section>
+
+      {% if current_user.role == "IT Supervisor" and ticket.status in ["Open", "Assigned"] %}
+        <section class="card bg-white p-4 mb-4">
+          <h2 class="h5 mb-2">Assign support officer</h2>
+          <p class="small text-secondary">Choose who will investigate and resolve this complaint.</p>
+          <form method="post" action="{{ url_for('assign_ticket', ticket_id=ticket.id) }}">
+            <label class="form-label" for="assigned-officer">Officer</label>
+            <select id="assigned-officer" class="form-select mb-3" name="assigned_to" required>
+              <option value="">Choose officer</option>
+              {% for agent in agents %}
+                <option {% if ticket.assigned_to == agent.name %}selected{% endif %}>{{ agent.name }}</option>
+              {% endfor %}
+            </select>
+            <button class="btn btn-dark">{{ "Reassign ticket" if ticket.assigned_to else "Assign ticket" }}</button>
+          </form>
+        </section>
+      {% elif current_user.role == "IT Support Officer" and can_update and ticket.status in ["Assigned", "In Progress", "Waiting on Branch"] %}
+        <section class="card bg-white p-4 mb-4">
+          <h2 class="h5 mb-2">Investigation and progress</h2>
+          <p class="small text-secondary">Record what you checked or changed so the next person can follow the work.</p>
+          <form method="post" action="{{ url_for('update_ticket_progress', ticket_id=ticket.id) }}">
+            <label class="form-label" for="work-status">Current work status</label>
+            <select id="work-status" class="form-select mb-3" name="status">
+              <option>In Progress</option>
+              <option>Waiting on Branch</option>
+            </select>
+            <label class="form-label" for="work-note">Work performed or next action</label>
+            <textarea id="work-note" class="form-control mb-3" name="message" rows="4" required placeholder="Checks performed, findings, or information still needed"></textarea>
+            <div class="d-flex flex-wrap gap-2">
+              <button class="btn btn-outline-dark" name="action" value="log-progress">Save progress</button>
+              <button class="btn btn-coral" name="action" value="submit-resolution">Submit resolution for approval</button>
+            </div>
+          </form>
+        </section>
+      {% elif current_user.role == "IT Support Officer" and not can_update and ticket.status not in ["Resolved", "Pending Approval"] %}
+        <section class="card mint-panel p-4 mb-4">
+          <h2 class="h5">Waiting for assignment</h2>
+          <p class="small text-secondary mb-0">A supervisor must assign this ticket before an officer can record investigation work.</p>
+        </section>
+      {% endif %}
+
+      {% if ticket.status == "Pending Approval" %}
+        <section class="card bg-white p-4 mb-4">
+          <div class="eyebrow mb-2">Closure review</div>
+          <h2 class="h5 mb-2">Resolution submitted</h2>
+          <p class="small text-secondary">The ticket closes only after both the supervisor and administrator approve.</p>
+          <div class="d-flex flex-wrap gap-2 mb-3">
+            {% for role in ["IT Supervisor", "Administrator"] %}
+              {% if approvals.get(role) %}
+                <span class="badge text-bg-success">{{ role }} approved</span>
+              {% else %}
+                <span class="badge text-bg-light">{{ role }} approval pending</span>
+              {% endif %}
+            {% endfor %}
+          </div>
+          {% if current_user.role in ["IT Supervisor", "Administrator"] and not approvals.get(current_user.role) %}
+            <form method="post" action="{{ url_for('approve_ticket_resolution', ticket_id=ticket.id) }}">
+              <label class="form-label" for="approval-note">Review note</label>
+              <textarea id="approval-note" class="form-control mb-3" name="note" rows="3" required placeholder="Confirm the work and outcome"></textarea>
+              <button class="btn btn-dark">Approve resolution</button>
+            </form>
+          {% endif %}
+        </section>
+      {% endif %}
+
+      {% if current_user.role == "Administrator" %}
+        <section class="card mint-panel p-4 mb-4">
+          <h2 class="h5">Administrator oversight</h2>
+          <p class="small text-secondary mb-0">Review the investigation and provide the independent closure approval. Operational assignment and repair work remain with the supervisor and assigned officer.</p>
+        </section>
+      {% endif %}
+    </div>
+
+    <aside class="col-xl-4">
+      <section class="card bg-white p-4">
+        <h2 class="h5 mb-3">Work history</h2>
+        {% for activity in activities %}
+          <div class="workflow-entry">
+            <div class="d-flex justify-content-between gap-2">
+              <strong class="small">{{ activity.action }}</strong>
+              <time class="small text-secondary">{{ activity.created_at.strftime("%d %b, %H:%M") }}</time>
+            </div>
+            <div class="small text-secondary">{{ activity.actor.name }}</div>
+            <p class="small mb-0 mt-1">{{ activity.message }}</p>
+          </div>
+        {% else %}
+          <p class="small text-secondary mb-0">No work has been recorded yet.</p>
+        {% endfor %}
+      </section>
+    </aside>
+  </div>
+{% endblock %}

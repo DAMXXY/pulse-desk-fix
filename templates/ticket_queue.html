@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Ticket Queue | PulseDesk{% endblock %}
+{% block content %}
+  <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+    <div>
+      <div class="eyebrow mb-2">Service desk</div>
+      <h1 class="page-title mb-1">Ticket queue</h1>
+      <p class="text-secondary mb-0">
+        {% if current_user.role == "IT Supervisor" %}
+          Assign new complaints and monitor work through closure approval.
+        {% else %}
+          Review ticket progress, resolution notes, and approval history.
+        {% endif %}
+      </p>
+    </div>
+    <span class="role-badge">{{ "Operational queue" if current_user.role == "IT Supervisor" else "Read-only oversight" }}</span>
+  </div>
+
+  <form class="card bg-white p-3 mb-4" method="get">
+    <div class="row g-2">
+      <div class="col-lg-6">
+        <input class="form-control" name="search" value="{{ request.args.get('search', '') }}" placeholder="Search ticket, branch, system, or issue">
+      </div>
+      <div class="col-sm-4 col-lg-2">
+        <select class="form-select" name="status">
+          <option value="">All statuses</option>
+          {% for value in ['Open', 'Assigned', 'In Progress', 'Waiting on Branch', 'Pending Approval', 'Resolved'] %}
+            <option value="{{ value }}" {% if request.args.get('status') == value %}selected{% endif %}>{{ value }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-sm-4 col-lg-2">
+        <select class="form-select" name="priority">
+          <option value="">All priorities</option>
+          {% for value in ['High', 'Medium', 'Low'] %}
+            <option value="{{ value }}" {% if request.args.get('priority') == value %}selected{% endif %}>{{ value }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-sm-4 col-lg-2"><button class="btn btn-outline-dark w-100">Filter</button></div>
+    </div>
+  </form>
+
+  <div class="card bg-white">
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr><th class="ps-3">Ticket</th><th>Branch</th><th>System</th><th>Category</th><th>Priority</th><th>Status</th><th class="pe-3">Assigned officer</th></tr>
+        </thead>
+        <tbody>
+          {% for ticket in tickets %}
+            <tr>
+              <td class="ps-3">
+                <a class="ticket-number" href="{{ url_for('ticket_detail', ticket_id=ticket.id) }}">{{ ticket.ticket_number }}</a>
+                <div class="small text-secondary">{{ ticket.created_at.strftime("%d %b %Y") }}</div>
+              </td>
+              <td>{{ ticket.branch.branch_name }}<div class="small text-secondary">{{ ticket.reported_by }}</div></td>
+              <td>{{ ticket.system }}</td>
+              <td>{{ ticket.category }}</td>
+              <td><span class="priority-{{ ticket.priority|lower }} fw-semibold">{{ ticket.priority }}</span></td>
+              <td><span class="badge status-{{ ticket.status|lower|replace(' ', '-') }}">{{ ticket.status }}</span></td>
+              <td class="pe-3">{{ ticket.assigned_to or 'Awaiting assignment' }}</td>
+            </tr>
+          {% else %}
+            <tr><td colspan="7" class="empty-state">No tickets match these filters.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endblock %}

@@ -17,10 +17,22 @@ from flask import (
     make_response,
 )
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import or_
+from sqlalchemy import UniqueConstraint, or_
 from werkzeug.security import check_password_hash, generate_password_hash
 
 BASE_DIR = Path(__file__).resolve().parent
+
+
+def _database_uri(database_url):
+    if not database_url:
+        return f"sqlite:///{BASE_DIR / 'support.db'}"
+    if database_url.startswith("postgres://"):
+        database_url = database_url.replace("postgres://", "postgresql://", 1)
+    if database_url.startswith("postgresql://"):
+        return database_url.replace("postgresql://", "postgresql+psycopg://", 1)
+    return database_url
+
+
 app = Flask(__name__)
 
 
@@ -36,8 +48,8 @@ app.jinja_env.globals["style_version"] = _stylesheet_version(
     BASE_DIR / "static" / "style.css"
 )
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "academic-prototype-change-me")
-app.config["SQLALCHEMY_DATABASE_URI"] = (
-    os.environ.get("DATABASE_URL") or f"sqlite:///{BASE_DIR / 'support.db'}"
+app.config["SQLALCHEMY_DATABASE_URI"] = _database_uri(
+    os.environ.get("DATABASE_URL")
 )
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)
@@ -89,6 +101,45 @@ class Alert(db.Model):
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     status = db.Column(db.String(30), nullable=False, default="Active")
     related_ticket_ids = db.Column(db.Text, default="")
+
+
+class Complaint(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    sender_name = db.Column(db.String(120), nullable=False)
+    sender_email = db.Column(db.String(160), nullable=False)
+    subject = db.Column(db.String(180), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    branch_id = db.Column(db.Integer, db.ForeignKey("branch.id"), nullable=False)
+    system = db.Column(db.String(100), nullable=False)
+    category = db.Column(db.String(80), nullable=False)
+    priority = db.Column(db.String(20), nullable=False, default="Medium")
+    status = db.Column(db.String(40), nullable=False, default="Needs Review")
+    info_request = db.Column(db.Text)
+    ticket_id = db.Column(db.Integer, db.ForeignKey("ticket.id"))
+    received_by_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+
+class TicketActivity(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    ticket_id = db.Column(db.Integer, db.ForeignKey("ticket.id"), nullable=False)
+    actor_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    actor = db.relationship("User")
+    action = db.Column(db.String(50), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+
+class TicketApproval(db.Model):
+    __table_args__ = (UniqueConstraint("ticket_id", "role", name="uq_ticket_approval_role"),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    ticket_id = db.Column(db.Integer, db.ForeignKey("ticket.id"), nullable=False)
+    approver_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    approver = db.relationship("User")
+    role = db.Column(db.String(40), nullable=False)
+    note = db.Column(db.Text, nullable=False, default="")
+    approved_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
 
 def current_user():
@@ -212,6 +263,41 @@ def seed_data():
         ]
     )
     db.session.commit()
+
+
+@app.route("/accounts", methods=["GET", "POST"])
+@roles_required("Administrator")
+def accounts():
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
+        role = request.form.get("role", "")
+        allowed_roles = {"IT Support Officer", "IT Supervisor"}
+
+        if not name or not email or len(password) < 8 or role not in allowed_roles:
+            flash("Enter a name, email, valid staff role, and password of at least 8 characters.", "danger")
+            return redirect(url_for("accounts"))
+        if User.query.filter_by(email=email).first():
+            flash("An account with that email already exists.", "danger")
+            return redirect(url_for("accounts"))
+
+        db.session.add(
+            User(
+                name=name,
+                email=email,
+                password=generate_password_hash(password),
+                role=role,
+            )
+        )
+        db.session.commit()
+        flash(f"Created the {role} account for {name}.", "success")
+        return redirect(url_for("accounts"))
+
+    return render_template(
+        "accounts.html",
+        users=User.query.order_by(User.role, User.name).all(),
+    )
 
 
 @app.route("/demo-data", methods=["GET", "POST"])
@@ -418,64 +504,292 @@ def tickets():
     if priority:
         query = query.filter_by(priority=priority)
     return render_template(
-        "tickets.html", tickets=query.order_by(Ticket.created_at.desc()).all()
+        "ticket_queue.html", tickets=query.order_by(Ticket.created_at.desc()).all()
     )
 
 
 @app.route("/tickets/new", methods=["GET", "POST"])
 @roles_required("IT Support Officer")
 def new_ticket():
-    branches, agents = (
-        Branch.query.order_by(Branch.branch_name).all(),
-        User.query.order_by(User.name).all(),
-    )
+    return redirect(url_for("complaints"))
+
+
+@app.route("/complaints", methods=["GET", "POST"])
+@roles_required("IT Support Officer")
+def complaints():
     if request.method == "POST":
-        ticket = Ticket(
-            ticket_number="PENDING",
-            branch_id=request.form["branch_id"],
-            reported_by=request.form["reported_by"].strip(),
-            category=request.form["category"].strip(),
-            system=request.form["system"].strip(),
-            description=request.form["description"].strip(),
-            priority=request.form["priority"],
-            assigned_to=request.form.get("assigned_to") or None,
+        branch_id = request.form.get("branch_id", type=int)
+        branch = db.session.get(Branch, branch_id) if branch_id else None
+        fields = {
+            "sender_name": request.form.get("sender_name", "").strip(),
+            "sender_email": request.form.get("sender_email", "").strip(),
+            "subject": request.form.get("subject", "").strip(),
+            "message": request.form.get("message", "").strip(),
+            "system": request.form.get("system", "").strip(),
+            "category": request.form.get("category", "").strip(),
+            "priority": request.form.get("priority", "Medium"),
+        }
+        if not branch or any(not value for value in fields.values()):
+            flash("Complete the sender, branch, issue, and complaint details.", "danger")
+            return redirect(url_for("complaints"))
+
+        if fields["priority"] not in {"Low", "Medium", "High"}:
+            flash("Choose a valid priority.", "danger")
+            return redirect(url_for("complaints"))
+
+        complaint = Complaint(
+            **fields,
+            branch_id=branch.id,
+            received_by_id=current_user().id,
         )
-        db.session.add(ticket)
-        db.session.flush()
-        ticket.ticket_number = f"TKT-{ticket.id:05d}"
-        detect_patterns()
+        db.session.add(complaint)
         db.session.commit()
-        flash(f"Ticket {ticket.ticket_number} was logged successfully.", "success")
-        return redirect(url_for("ticket_detail", ticket_id=ticket.id))
-    return render_template("new_ticket.html", branches=branches, agents=agents)
+        flash("Incoming complaint added to the intake inbox.", "success")
+        return redirect(url_for("complaints"))
+
+    return render_template(
+        "complaints.html",
+        complaints=Complaint.query.order_by(Complaint.created_at.desc()).all(),
+        branches=Branch.query.order_by(Branch.branch_name).all(),
+    )
+
+
+@app.post("/complaints/<int:complaint_id>/request-info")
+@roles_required("IT Support Officer")
+def request_complaint_info(complaint_id):
+    complaint = db.get_or_404(Complaint, complaint_id)
+    if complaint.ticket_id:
+        flash("This complaint has already been forwarded to the supervisor.", "warning")
+        return redirect(url_for("complaints"))
+
+    message = request.form.get("info_request", "").strip()
+    if not message:
+        flash("Write the information you need from the sender.", "danger")
+        return redirect(url_for("complaints"))
+
+    complaint.info_request = message
+    complaint.status = "Awaiting Sender"
+    db.session.commit()
+    flash("Information request saved as a draft. Send it through your normal email.", "success")
+    return redirect(url_for("complaints"))
+
+
+@app.post("/complaints/<int:complaint_id>/sender-reply")
+@roles_required("IT Support Officer")
+def record_sender_reply(complaint_id):
+    complaint = db.get_or_404(Complaint, complaint_id)
+    if complaint.ticket_id or complaint.status != "Awaiting Sender":
+        flash("This complaint is not waiting for a sender response.", "warning")
+        return redirect(url_for("complaints"))
+
+    reply = request.form.get("sender_reply", "").strip()
+    if not reply:
+        flash("Enter the sender's additional information.", "danger")
+        return redirect(url_for("complaints"))
+
+    complaint.message = f"{complaint.message}\n\nSender follow-up:\n{reply}"
+    complaint.status = "Needs Review"
+    db.session.commit()
+    flash("Sender response recorded. The complaint is ready for review.", "success")
+    return redirect(url_for("complaints"))
+
+
+@app.post("/complaints/<int:complaint_id>/forward")
+@roles_required("IT Support Officer")
+def forward_complaint(complaint_id):
+    complaint = db.get_or_404(Complaint, complaint_id)
+    if complaint.ticket_id:
+        flash("This complaint has already been forwarded.", "warning")
+        return redirect(url_for("ticket_detail", ticket_id=complaint.ticket_id))
+    if complaint.status == "Awaiting Sender":
+        flash("Record the sender's reply before forwarding this complaint.", "warning")
+        return redirect(url_for("complaints"))
+
+    ticket = Ticket(
+        ticket_number="PENDING",
+        branch_id=complaint.branch_id,
+        reported_by=complaint.sender_name,
+        category=complaint.category,
+        system=complaint.system,
+        description=f"{complaint.subject}\n\n{complaint.message}",
+        priority=complaint.priority,
+        status="Open",
+    )
+    db.session.add(ticket)
+    db.session.flush()
+    ticket.ticket_number = f"TKT-{ticket.id:05d}"
+    complaint.status = "Forwarded to Supervisor"
+    complaint.ticket_id = ticket.id
+    db.session.add(
+        TicketActivity(
+            ticket_id=ticket.id,
+            actor_id=current_user().id,
+            action="Complaint received",
+            message=f"Received from {complaint.sender_name} ({complaint.sender_email}) and forwarded for assignment.",
+        )
+    )
+    detect_patterns()
+    db.session.commit()
+    flash(f"Complaint forwarded as {ticket.ticket_number} for supervisor assignment.", "success")
+    return redirect(url_for("ticket_detail", ticket_id=ticket.id))
 
 
 @app.route("/tickets/<int:ticket_id>")
 @login_required
 def ticket_detail(ticket_id):
-    return render_template(
-        "ticket_detail.html", ticket=db.get_or_404(Ticket, ticket_id)
-    )
-
-
-@app.post("/tickets/<int:ticket_id>/update")
-@roles_required("IT Supervisor", "Administrator")
-def update_ticket(ticket_id):
     ticket = db.get_or_404(Ticket, ticket_id)
-    ticket.status, ticket.priority, ticket.assigned_to = (
-        request.form["status"],
-        request.form["priority"],
-        request.form.get("assigned_to") or None,
+    user = current_user()
+    template = "ticket_detail_workflow.html"
+    approvals = {
+        approval.role: approval
+        for approval in TicketApproval.query.filter_by(ticket_id=ticket.id).all()
+    }
+    return render_template(
+        template,
+        ticket=ticket,
+        activities=TicketActivity.query.filter_by(ticket_id=ticket.id)
+        .order_by(TicketActivity.created_at.asc())
+        .all(),
+        approvals=approvals,
+        agents=User.query.filter_by(role="IT Support Officer").order_by(User.name).all(),
+        can_update=ticket.assigned_to == user.name,
     )
-    ticket.resolved_at = datetime.utcnow() if ticket.status == "Resolved" else None
-    detect_patterns()
+
+
+@app.post("/tickets/<int:ticket_id>/assign")
+@roles_required("IT Supervisor")
+def assign_ticket(ticket_id):
+    ticket = db.get_or_404(Ticket, ticket_id)
+    agent = User.query.filter_by(
+        name=request.form.get("assigned_to", "").strip(),
+        role="IT Support Officer",
+    ).first()
+    if not agent or ticket.status in {"Pending Approval", "Resolved"}:
+        flash("Choose an officer and a ticket that is awaiting assignment.", "danger")
+        return redirect(url_for("ticket_detail", ticket_id=ticket.id))
+
+    ticket.assigned_to = agent.name
+    ticket.status = "Assigned"
+    db.session.add(
+        TicketActivity(
+            ticket_id=ticket.id,
+            actor_id=current_user().id,
+            action="Assigned",
+            message=f"Assigned to {agent.name}.",
+        )
+    )
     db.session.commit()
-    flash(f"{ticket.ticket_number} was updated.", "success")
-    return redirect(request.referrer or url_for("tickets"))
+    flash(f"{ticket.ticket_number} assigned to {agent.name}.", "success")
+    return redirect(url_for("ticket_detail", ticket_id=ticket.id))
+
+
+@app.post("/tickets/<int:ticket_id>/progress")
+@roles_required("IT Support Officer")
+def update_ticket_progress(ticket_id):
+    ticket = db.get_or_404(Ticket, ticket_id)
+    user = current_user()
+    if ticket.assigned_to != user.name:
+        flash("Only the assigned officer can update this ticket.", "danger")
+        return redirect(url_for("ticket_detail", ticket_id=ticket.id))
+    if ticket.status not in {"Assigned", "In Progress", "Waiting on Branch"}:
+        flash("This ticket is not accepting progress updates.", "warning")
+        return redirect(url_for("ticket_detail", ticket_id=ticket.id))
+
+    action = request.form.get("action")
+    message = request.form.get("message", "").strip()
+    if not message:
+        flash("Add a note describing the work completed.", "danger")
+        return redirect(url_for("ticket_detail", ticket_id=ticket.id))
+
+    if action == "submit-resolution":
+        ticket.status = "Pending Approval"
+        activity_action = "Resolution submitted"
+    elif action == "log-progress":
+        status = request.form.get("status")
+        if status not in {"In Progress", "Waiting on Branch"}:
+            flash("Choose a valid work status.", "danger")
+            return redirect(url_for("ticket_detail", ticket_id=ticket.id))
+        ticket.status = status
+        activity_action = status
+    else:
+        flash("Choose a valid work action.", "danger")
+        return redirect(url_for("ticket_detail", ticket_id=ticket.id))
+
+    db.session.add(
+        TicketActivity(
+            ticket_id=ticket.id,
+            actor_id=user.id,
+            action=activity_action,
+            message=message,
+        )
+    )
+    db.session.commit()
+    flash("Resolution submitted for approval." if action == "submit-resolution" else "Progress recorded.", "success")
+    return redirect(url_for("ticket_detail", ticket_id=ticket.id))
+
+
+@app.post("/tickets/<int:ticket_id>/approve")
+@roles_required("IT Supervisor", "Administrator")
+def approve_ticket_resolution(ticket_id):
+    ticket = db.get_or_404(Ticket, ticket_id)
+    user = current_user()
+    if ticket.status != "Pending Approval":
+        flash("Only submitted resolutions can be approved.", "warning")
+        return redirect(url_for("ticket_detail", ticket_id=ticket.id))
+
+    if TicketApproval.query.filter_by(ticket_id=ticket.id, role=user.role).first():
+        flash("Your role has already approved this resolution.", "warning")
+        return redirect(url_for("ticket_detail", ticket_id=ticket.id))
+
+    note = request.form.get("note", "").strip()
+    if not note:
+        flash("Add a review note before approving the resolution.", "danger")
+        return redirect(url_for("ticket_detail", ticket_id=ticket.id))
+
+    db.session.add(
+        TicketApproval(
+            ticket_id=ticket.id,
+            approver_id=user.id,
+            role=user.role,
+            note=note,
+        )
+    )
+    db.session.add(
+        TicketActivity(
+            ticket_id=ticket.id,
+            actor_id=user.id,
+            action=f"{user.role} approval",
+            message=note,
+        )
+    )
+    approval_roles = {
+        approval.role
+        for approval in TicketApproval.query.filter_by(ticket_id=ticket.id).all()
+    }
+    approval_roles.add(user.role)
+    if {"IT Supervisor", "Administrator"}.issubset(approval_roles):
+        ticket.status = "Resolved"
+        ticket.resolved_at = datetime.utcnow()
+        db.session.add(
+            TicketActivity(
+                ticket_id=ticket.id,
+                actor_id=user.id,
+                action="Closed",
+                message="Supervisor and administrator approvals are complete.",
+            )
+        )
+    db.session.commit()
+    flash(
+        "Both approvals are complete. The ticket is closed."
+        if ticket.status == "Resolved"
+        else f"{user.role} approval recorded. Awaiting the other approval.",
+        "success",
+    )
+    return redirect(url_for("ticket_detail", ticket_id=ticket.id))
 
 
 @app.route("/updates", methods=["GET", "POST"])
-@roles_required("IT Supervisor", "Administrator")
+@roles_required("IT Supervisor")
 def updates():
     if request.method == "POST":
         db.session.add(
@@ -522,7 +836,7 @@ def alert_detail(alert_id):
 
 
 @app.post("/alerts/<int:alert_id>/close")
-@roles_required("IT Supervisor", "Administrator")
+@roles_required("IT Supervisor")
 def close_alert(alert_id):
     alert = db.get_or_404(Alert, alert_id)
     alert.status = "Closed"

@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}Complaint Intake | PulseDesk{% endblock %}
+{% block content %}
+  <div class="mb-4">
+    <div class="eyebrow mb-2">Incoming mail</div>
+    <h1 class="page-title mb-1">Complaint intake</h1>
+    <p class="text-secondary mb-0">Record messages received from branches, request missing details, and forward complete complaints for assignment.</p>
+  </div>
+
+  <div class="row g-4 align-items-start">
+    <div class="col-xl-5">
+      <form class="card bg-white p-4" method="post">
+        <h2 class="h5 mb-3">Record received email</h2>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label" for="sender-name">From</label>
+            <input id="sender-name" class="form-control" name="sender_name" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="sender-email">Sender email</label>
+            <input id="sender-email" class="form-control" type="email" name="sender_email" required>
+          </div>
+          <div class="col-12">
+            <label class="form-label" for="subject">Subject</label>
+            <input id="subject" class="form-control" name="subject" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="branch">Branch</label>
+            <select id="branch" class="form-select" name="branch_id" required>
+              <option value="">Choose branch</option>
+              {% for branch in branches %}
+                <option value="{{ branch.id }}">{{ branch.branch_name }} - {{ branch.location }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="system">System</label>
+            <input id="system" class="form-control" name="system" placeholder="e.g. Finacle" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="category">Category</label>
+            <select id="category" class="form-select" name="category" required>
+              <option value="">Choose category</option>
+              {% for value in ['Application', 'Network', 'Hardware', 'Access', 'Other'] %}
+                <option>{{ value }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="priority">Initial priority</label>
+            <select id="priority" class="form-select" name="priority">
+              <option>Medium</option>
+              <option>High</option>
+              <option>Low</option>
+            </select>
+          </div>
+          <div class="col-12">
+            <label class="form-label" for="message">Email message</label>
+            <textarea id="message" class="form-control" name="message" rows="5" required></textarea>
+          </div>
+        </div>
+        <button class="btn btn-dark mt-4">Record as received</button>
+      </form>
+      <p class="small text-secondary mt-3">Information requests are saved as drafts here. Send the message through your normal email system.</p>
+    </div>
+
+    <div class="col-xl-7">
+      <div class="d-flex justify-content-between align-items-end mb-3">
+        <div>
+          <div class="eyebrow mb-1">Mail queue</div>
+          <h2 class="h4 mb-0">Received complaints</h2>
+        </div>
+        <span class="small text-secondary">{{ complaints|length }} total</span>
+      </div>
+
+      {% for complaint in complaints %}
+        <article class="card bg-white p-4 mb-3">
+          <div class="d-flex justify-content-between align-items-start gap-3">
+            <div class="min-w-0">
+              <h3 class="h6 mb-1">{{ complaint.subject }}</h3>
+              <p class="small text-secondary mb-2">{{ complaint.sender_name }} &lt;{{ complaint.sender_email }}&gt;</p>
+              <div class="small text-secondary">{{ branch_names[complaint.branch_id] }} | {{ complaint.system }} | {{ complaint.created_at.strftime("%d %b %Y, %H:%M") }}</div>
+            </div>
+            <span class="badge text-bg-light">{{ complaint.status }}</span>
+          </div>
+          <p class="complaint-message mt-3 mb-0">{{ complaint.message }}</p>
+
+          {% if complaint.info_request %}
+            <div class="mint-panel p-3 mt-3">
+              <div class="small fw-semibold mb-1">Information request draft</div>
+              <p class="small mb-0">{{ complaint.info_request }}</p>
+            </div>
+          {% endif %}
+
+          <div class="d-flex flex-wrap gap-3 mt-3">
+            {% if not complaint.ticket_id %}
+              {% if complaint.status == 'Awaiting Sender' %}
+                <form class="flex-grow-1" method="post" action="{{ url_for('record_sender_reply', complaint_id=complaint.id) }}">
+                  <label class="form-label" for="reply-{{ complaint.id }}">Record sender's additional information</label>
+                  <textarea id="reply-{{ complaint.id }}" class="form-control mb-2" name="sender_reply" rows="2" required></textarea>
+                  <button class="btn btn-outline-dark btn-sm">Record reply</button>
+                </form>
+              {% else %}
+                <form class="flex-grow-1" method="post" action="{{ url_for('request_complaint_info', complaint_id=complaint.id) }}">
+                  <label class="form-label" for="request-{{ complaint.id }}">Need more information?</label>
+                  <textarea id="request-{{ complaint.id }}" class="form-control mb-2" name="info_request" rows="2" placeholder="Draft the questions for the sender" required></textarea>
+                  <button class="btn btn-outline-dark btn-sm">Save request draft</button>
+                </form>
+                <form class="align-self-end" method="post" action="{{ url_for('forward_complaint', complaint_id=complaint.id) }}">
+                  <button class="btn btn-coral btn-sm">Forward to supervisor</button>
+                </form>
+              {% endif %}
+            {% else %}
+              <a class="btn btn-outline-dark btn-sm" href="{{ url_for('ticket_detail', ticket_id=complaint.ticket_id) }}">Open {{ complaint.ticket_id and 'ticket' }}</a>
+            {% endif %}
+          </div>
+        </article>
+      {% else %}
+        <div class="empty-state py-4">No complaints received yet.</div>
+      {% endfor %}
+    </div>
+  </div>
+{% endblock %}

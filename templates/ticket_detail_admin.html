@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}{{ ticket.ticket_number }} | PulseDesk{% endblock %}
+{% block content %}
+  <div class="mb-4">
+    <a class="small text-secondary" href="{{ url_for('tickets') }}">&larr; Back to tickets</a>
+    <div class="eyebrow mt-3 mb-2">Administrator oversight</div>
+    <h1 class="page-title mb-1">{{ ticket.ticket_number }}</h1>
+    <p class="text-secondary mb-0">Review ticket activity without changing operational records.</p>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="card bg-white p-4">
+        <div class="row g-4">
+          <div class="col-sm-6"><div class="detail-label">Branch</div><div class="detail-value">{{ ticket.branch.branch_name }}</div></div>
+          <div class="col-sm-6"><div class="detail-label">Reported by</div><div class="detail-value">{{ ticket.reported_by }}</div></div>
+          <div class="col-sm-6"><div class="detail-label">System</div><div class="detail-value">{{ ticket.system }}</div></div>
+          <div class="col-sm-6"><div class="detail-label">Category</div><div class="detail-value">{{ ticket.category }}</div></div>
+          <div class="col-sm-6"><div class="detail-label">Priority</div><div class="detail-value priority-{{ ticket.priority|lower }}">{{ ticket.priority }}</div></div>
+          <div class="col-sm-6"><div class="detail-label">Status</div><div class="detail-value">{{ ticket.status }}</div></div>
+          <div class="col-sm-6"><div class="detail-label">Assigned to</div><div class="detail-value">{{ ticket.assigned_to or 'Unassigned' }}</div></div>
+          <div class="col-sm-6"><div class="detail-label">Created</div><div class="detail-value">{{ ticket.created_at.strftime("%d %B %Y at %H:%M") }}</div></div>
+          <div class="col-12"><div class="detail-label">Description</div><div class="description-box">{{ ticket.description }}</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card mint-panel p-4">
+        <h2 class="h5">Read-only oversight</h2>
+        <p class="small text-secondary mb-0">Supervisors handle ticket status, priority, and ownership. Use Reports to review overall service activity.</p>
+      </div>
+    </div>
+  </div>
+{% endblock %}

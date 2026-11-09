@@ -12,7 +12,26 @@
       <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v=style_version) }}">
     {% endif %}
   </head>
-  <body>
+  <body
+    data-login-path="{{ url_for('login') }}"
+    data-login-page="{{ 'true' if request.endpoint == 'login' else 'false' }}"
+  >
+    <div
+      id="page-transition"
+      class="page-transition{{ ' page-transition--login' if request.endpoint == 'login' }}"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+      aria-hidden="true"
+    >
+      <div class="page-transition__content">
+        <span class="page-transition__mark" aria-hidden="true">P</span>
+        <span class="page-transition__brand">PulseDesk</span>
+        <span class="page-transition__message" data-transition-message>Loading workspace</span>
+        <span class="page-transition__track" aria-hidden="true"><span></span></span>
+      </div>
+    </div>
+
       <nav class="navbar navbar-expand-lg app-navbar {{ 'login-navbar' if request.endpoint == 'login' }}">
         <div class="container-fluid px-4">
           <a class="navbar-brand" href="{{ url_for('dashboard') }}">
@@ -39,13 +58,22 @@
                 >
                   Dashboard
                 </a>
-                <a
-                  class="nav-link {{ 'active' if request.endpoint in ['tickets', 'new_ticket', 'ticket_detail'] }}"
-                  href="{{ url_for('tickets') }}"
-                >
-                  Tickets
-                </a>
-                {% if current_user.role in ['IT Supervisor', 'Administrator'] %}
+                {% if current_user.role == 'IT Support Officer' %}
+                  <a
+                    class="nav-link {{ 'active' if request.endpoint in ['complaints', 'new_ticket'] }}"
+                    href="{{ url_for('complaints') }}"
+                  >
+                    Complaint inbox
+                  </a>
+                {% else %}
+                  <a
+                    class="nav-link {{ 'active' if request.endpoint in ['tickets', 'ticket_detail'] }}"
+                    href="{{ url_for('tickets') }}"
+                  >
+                    Ticket queue
+                  </a>
+                {% endif %}
+                {% if current_user.role == 'IT Supervisor' %}
                   <a
                     class="nav-link {{ 'active' if request.endpoint == 'updates' }}"
                     href="{{ url_for('updates') }}"
@@ -65,6 +93,14 @@
                 >
                   Reports
                 </a>
+                {% if current_user.role == 'Administrator' %}
+                  <a
+                    class="nav-link {{ 'active' if request.endpoint == 'accounts' }}"
+                    href="{{ url_for('accounts') }}"
+                  >
+                    Staff accounts
+                  </a>
+                {% endif %}
               </div>
 
               <div class="account-menu">
@@ -94,6 +130,7 @@
       {% block content %}{% endblock %}
     </main>
 
+    <script src="{{ url_for('static', filename='page-transition.js') }}" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   </body>
 </html>

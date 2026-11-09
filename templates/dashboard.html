@@ -7,9 +7,20 @@
     <div>
       <div class="eyebrow mb-2">IT service support</div>
       <h1 class="page-title mb-1">Morning, {{ current_user.name.split()[0] }}.</h1>
-      <div class="role-context"> <span class="role-badge">{{ current_user.role }} </span><span>{{ 'You can update tickets, record deployments, and review alerts.' if current_user.role in ['IT Supervisor', 'Administrator'] else 'You can log complaints, monitor tickets, and read support reports.' }}</span> </div>
+      <div class="role-context">
+        <span class="role-badge">{{ current_user.role }}</span>
+        <span>
+          {% if current_user.role == 'IT Support Officer' %}
+            Log complaints and follow their progress.
+          {% elif current_user.role == 'IT Supervisor' %}
+            Run daily operations: triage tickets, record deployments, and review alerts.
+          {% else %}
+            Review operational records and reports; generate demo activity when needed.
+          {% endif %}
+        </span>
+      </div>
     </div>
-    {% if current_user.role=="IT Support Officer" %} <a href="{{ url_for('new_ticket') }}" class="btn btn-coral px-4">Log a complaint </a>{% elif current_user.role=="Administrator" %}<a href="{{ url_for('demo_data') }}" class="btn btn-dark px-4">Generate demo activity</a> {% else %} <a href="{{ url_for('tickets') }}" class="btn btn-dark px-4">Review ticket queue </a>{% endif %} </div> <div class="row g-3 mb-4"> {% for key, label in [('open','Open tickets'),('resolved','Resolved'),('high','High priority'),('total','Total logged')] %} <div class="col-6 col-xl-3"> <div class="card stat-card d-flex flex-row overflow-hidden"> <div class="stat-accent"></div><div class="p-3"><div class="stat-label">{{ label }}</div> <div class="stat-value mt-2">{{ stats[key] }}</div></div> </div></div> {% endfor %} </div> <div class="row g-4">
+    {% if current_user.role=="IT Support Officer" %} <a href="{{ url_for('complaints') }}" class="btn btn-coral px-4">Open complaint inbox</a>{% elif current_user.role=="Administrator" %}<a href="{{ url_for('demo_data') }}" class="btn btn-dark px-4">Generate demo activity</a> {% else %} <a href="{{ url_for('tickets') }}" class="btn btn-dark px-4">Review ticket queue </a>{% endif %} </div> <div class="row g-3 mb-4"> {% for key, label in [('open','Open tickets'),('resolved','Resolved'),('high','High priority'),('total','Total logged')] %} <div class="col-6 col-xl-3"> <div class="card stat-card d-flex flex-row overflow-hidden"> <div class="stat-accent"></div><div class="p-3"><div class="stat-label">{{ label }}</div> <div class="stat-value mt-2">{{ stats[key] }}</div></div> </div></div> {% endfor %} </div> <div class="row g-4">
       <div class="col-xl-8">
         <div class="section-heading">
           <div>

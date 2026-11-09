@@ -4,7 +4,7 @@
   <div
     class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4"
   >
-    <div> <div class="eyebrow mb-2">Service desk</div><h1 class="page-title mb-1">Tickets</h1> <p class="text-secondary mb-0"> {% if current_user.role=="IT Support Officer" %}Log and monitor branch complaints.{% else %}Triage, assign, and manage branch complaints.{% endif %} </p></div> {% if current_user.role=="IT Support Officer" %} <a href="{{ url_for('new_ticket') }}" class="btn btn-coral px-4">+Log ticket </a>{% else %}<span class="role-badge">{{ current_user.role }}  |  management view</span> {% endif %} </div> <form class="card bg-white p-3 mb-4" method="get"> <div class="row g-2"> <div class="col-lg-6"> <input
+    <div> <div class="eyebrow mb-2">Service desk</div><h1 class="page-title mb-1">Tickets</h1> <p class="text-secondary mb-0"> {% if current_user.role=="IT Support Officer" %}Log and monitor branch complaints.{% elif current_user.role=="IT Supervisor" %}Triage, assign, and manage branch complaints.{% else %}Review branch activity in read-only oversight mode.{% endif %} </p></div> {% if current_user.role=="IT Support Officer" %} <a href="{{ url_for('new_ticket') }}" class="btn btn-coral px-4">+Log ticket </a>{% elif current_user.role=="IT Supervisor" %}<span class="role-badge">Operational queue</span>{% else %}<span class="role-badge">Read-only oversight</span> {% endif %} </div> <form class="card bg-white p-3 mb-4" method="get"> <div class="row g-2"> <div class="col-lg-6"> <input
    class="form-control"
    name="search"
    value="{{ request.args.get('search', '') }}"

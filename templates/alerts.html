@@ -21,9 +21,9 @@
       class="btn btn-sm btn-outline-dark"
       href="{{ url_for('alert_detail', alert_id=alert.id) }}"
     >
-      View tickets </a>{% if alert.status=="Active" and current_user.role in ["IT Supervisor", "Administrator"] %}<form
+      View tickets </a>{% if alert.status=="Active" and current_user.role == "IT Supervisor" %}<form
   method="post"
   action="{{ url_for('close_alert', alert_id=alert.id) }}"
 >
-      <button class="btn btn-sm btn-dark">Mark reviewed</button></form> {% endif %} </div></div> </div></div> {% else %} <div class="empty-state">No alerts have been generated yet.</div>{% endfor %}</div> {% endblock %}
+      <button class="btn btn-sm btn-dark">Mark reviewed</button></form> {% elif current_user.role == "Administrator" %}<span class="role-badge">Read-only</span>{% endif %} </div></div> </div></div> {% else %} <div class="empty-state">No alerts have been generated yet.</div>{% endfor %}</div> {% endblock %}
 
